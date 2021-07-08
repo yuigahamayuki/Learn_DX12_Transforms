@@ -2,6 +2,8 @@
 
 #include "dx_sample.h"
 
+#include "scene.h"
+
 using Microsoft::WRL::ComPtr;
 
 class MyEngine : public DXSample {
@@ -21,12 +23,16 @@ protected:
 private:
   void LoadPipeline();
   void LoadAssets();
+  void LoadSizeDependentResources();
 
   // D3D objects
   ComPtr<ID3D12Device> device_;
   ComPtr<IDXGISwapChain4> swap_chain_;
   ComPtr<ID3D12CommandQueue> command_queue_;
   ComPtr<ID3D12Fence> fence_;
+
+  // Scene rendering resources.
+  std::unique_ptr<Scene> scene_;
 
   // Frame synchronization objects
   UINT current_frame_index_ = 0;

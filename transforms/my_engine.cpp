@@ -16,6 +16,8 @@ MyEngine::~MyEngine()
 void MyEngine::OnInit()
 {
   LoadPipeline();
+  LoadAssets();
+  LoadSizeDependentResources();
 }
 
 void MyEngine::OnUpdate()
@@ -105,4 +107,18 @@ void MyEngine::LoadPipeline()
 
 void MyEngine::LoadAssets()
 {
+  if (!scene_) {
+    scene_ = std::make_unique<Scene>(kFrameCount, width_, height_);
+  }
+}
+
+void MyEngine::LoadSizeDependentResources()
+{
+  ComPtr<ID3D12Resource> render_targets[kFrameCount]{};
+  for (UINT i = 0; i < kFrameCount; ++i) {
+    ThrowIfFailed(swap_chain_->GetBuffer(i, IID_PPV_ARGS(&render_targets[i])));
+  }
+
+  scene_->LoadSizeDependentResources(device_.Get(), render_targets, width_, height_);
+  int a = 1;
 }
