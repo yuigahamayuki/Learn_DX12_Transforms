@@ -143,6 +143,7 @@
     <ClCompile Include="dx_sample.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="my_engine.cpp" />
+    <ClCompile Include="scene.cpp" />
     <ClCompile Include="win32_application.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -151,6 +152,7 @@
     <ClInclude Include="dx_sample.h" />
     <ClInclude Include="dx_sample_helper.h" />
     <ClInclude Include="my_engine.h" />
+    <ClInclude Include="scene.h" />
     <ClInclude Include="win32_application.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
