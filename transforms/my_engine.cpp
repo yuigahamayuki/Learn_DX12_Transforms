@@ -4,6 +4,7 @@
 #include "win32_application.h"
 
 MyEngine::MyEngine(UINT width, UINT height, std::wstring name) : DXSample(width, height, name),
+  fence_values_{},
   width_(width), height_(height)
 {
 }
@@ -57,7 +58,7 @@ void MyEngine::LoadPipeline()
 
   ComPtr<IDXGIAdapter1> hardware_adapter;
   GetHardwareAdapter(dxgi_factory.Get(), &hardware_adapter, true);
-  ThrowIfFailed(D3D12CreateDevice(hardware_adapter.Get(), D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&device_)));
+  ThrowIfFailed(D3D12CreateDevice(hardware_adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device_)));
 
   D3D12_COMMAND_QUEUE_DESC command_queue_desc{};
   command_queue_desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
@@ -92,9 +93,14 @@ void MyEngine::LoadPipeline()
   }
   ThrowIfFailed(dxgi_factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
   ThrowIfFailed(temp_swap_chain.As(&swap_chain_));
-
   current_frame_index_ = swap_chain_->GetCurrentBackBufferIndex();
 
+  ThrowIfFailed(device_->CreateFence(fence_values_[current_frame_index_], D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence_)));
+  fence_values_[current_frame_index_]++;
+  fence_event_ = CreateEvent(nullptr, false, false, nullptr);
+  if (fence_event_ == nullptr) {
+    ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
+  }
 }
 
 void MyEngine::LoadAssets()
