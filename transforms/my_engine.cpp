@@ -26,6 +26,11 @@ void MyEngine::OnUpdate()
 
 void MyEngine::OnRender()
 {
+  scene_->Render(command_queue_.Get());
+
+  ThrowIfFailed(swap_chain_->Present(0, DXGI_PRESENT_ALLOW_TEARING));
+
+  MoveToNextFrame();
 }
 
 void MyEngine::OnSizeChanged(UINT width, UINT height, bool minimized)
@@ -121,4 +126,30 @@ void MyEngine::LoadSizeDependentResources()
 
   scene_->LoadSizeDependentResources(device_.Get(), render_targets, width_, height_);
   int a = 1;
+}
+
+void MyEngine::WaitForGPU()
+{
+  command_queue_->Signal(fence_.Get(), fence_values_[current_frame_index_]);
+
+  ThrowIfFailed(fence_->SetEventOnCompletion(fence_values_[current_frame_index_], fence_event_));
+  WaitForSingleObjectEx(fence_event_, INFINITE, false);
+
+  fence_values_[current_frame_index_]++;
+}
+
+void MyEngine::MoveToNextFrame()
+{
+  const UINT64 current_fence_value = fence_values_[current_frame_index_];
+  ThrowIfFailed(command_queue_->Signal(fence_.Get(), current_fence_value));
+
+  current_frame_index_ = swap_chain_->GetCurrentBackBufferIndex();
+
+  if (fence_->GetCompletedValue() < fence_values_[current_frame_index_]) {
+    ThrowIfFailed(fence_->SetEventOnCompletion(fence_values_[current_frame_index_], fence_event_));
+    WaitForSingleObjectEx(fence_event_, INFINITE, false);
+  }
+  scene_->SetFrameIndex(current_fence_value);
+
+  fence_values_[current_frame_index_] = current_fence_value + 1;
 }

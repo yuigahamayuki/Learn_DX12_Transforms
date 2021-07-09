@@ -25,6 +25,9 @@ private:
   void LoadAssets();
   void LoadSizeDependentResources();
 
+  void WaitForGPU();
+  void MoveToNextFrame();
+
   // D3D objects
   ComPtr<ID3D12Device> device_;
   ComPtr<IDXGISwapChain4> swap_chain_;
