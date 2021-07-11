@@ -22,6 +22,7 @@ void MyEngine::OnInit()
 
 void MyEngine::OnUpdate()
 {
+  scene_->Update();
 }
 
 void MyEngine::OnRender()
@@ -115,6 +116,9 @@ void MyEngine::LoadAssets()
   if (!scene_) {
     scene_ = std::make_unique<Scene>(kFrameCount, width_, height_);
   }
+
+  scene_->Initialize(device_.Get(), command_queue_.Get(), current_frame_index_);
+  WaitForGPU();
 }
 
 void MyEngine::LoadSizeDependentResources()
@@ -125,7 +129,6 @@ void MyEngine::LoadSizeDependentResources()
   }
 
   scene_->LoadSizeDependentResources(device_.Get(), render_targets, width_, height_);
-  int a = 1;
 }
 
 void MyEngine::WaitForGPU()
@@ -149,7 +152,7 @@ void MyEngine::MoveToNextFrame()
     ThrowIfFailed(fence_->SetEventOnCompletion(fence_values_[current_frame_index_], fence_event_));
     WaitForSingleObjectEx(fence_event_, INFINITE, false);
   }
-  scene_->SetFrameIndex(current_fence_value);
+  scene_->SetFrameIndex(current_frame_index_);
 
   fence_values_[current_frame_index_] = current_fence_value + 1;
 }

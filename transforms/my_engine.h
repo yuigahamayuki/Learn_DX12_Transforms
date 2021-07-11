@@ -39,7 +39,7 @@ private:
 
   // Frame synchronization objects
   UINT current_frame_index_ = 0;
-  HANDLE fence_event_;
+  HANDLE fence_event_ = nullptr;
   UINT64 fence_values_[kFrameCount];
 
   UINT width_ = 0;
