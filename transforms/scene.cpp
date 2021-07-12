@@ -113,7 +113,7 @@ void Scene::LoadSizeDependentResources(ID3D12Device* device, ComPtr<ID3D12Resour
 
 void Scene::Update()
 {
-  const float angleChange = 0.2f;
+  const float angleChange = 0.002f;
 
   if (keyboard_input_.leftArrowPressed)
     cameras_[0].RotateAroundYAxis(-angleChange);
@@ -198,8 +198,8 @@ void Scene::CreateConstanfBuffer(ID3D12Device* device, UINT size, ID3D12Resource
 void Scene::CreateAssets(ID3D12Device* device)
 {
   AssetsManager::Vertex* vertices_data;
-  AssetsManager::GetSharedInstance().GetQuadVertexData(&vertices_data);
-  size_t vertex_data_size = AssetsManager::GetSharedInstance().GetQuadVertexDataSize();
+  AssetsManager::GetSharedInstance().GetCubeVertexData(&vertices_data);
+  size_t vertex_data_size = AssetsManager::GetSharedInstance().GetCubeVertexDataSize();
 
   // TODO: test with quad, need to be changed to cube
   CD3DX12_HEAP_PROPERTIES default_heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
@@ -231,8 +231,8 @@ void Scene::CreateAssets(ID3D12Device* device)
 
   // TODO: test with quad, need to be changed to cube
   DWORD* indices_data = nullptr;
-  AssetsManager::GetSharedInstance().GetQuadIndexData(&indices_data);
-  size_t index_data_size = AssetsManager::GetSharedInstance().GetQuadIndexDataSize();
+  AssetsManager::GetSharedInstance().GetCubeIndexData(&indices_data);
+  size_t index_data_size = AssetsManager::GetSharedInstance().GetCubeIndexDataSize();
   CD3DX12_RESOURCE_DESC index_buffer_resource_desc = CD3DX12_RESOURCE_DESC::Buffer(index_data_size);
   ThrowIfFailed(device->CreateCommittedResource(&default_heap_properties,
     D3D12_HEAP_FLAG_NONE,
@@ -295,7 +295,7 @@ void Scene::PopulateCommandLists()
 
   command_list_->OMSetRenderTargets(1, &rtv_cpu_descriptor_handle, false, nullptr);
 
-  command_list_->DrawIndexedInstanced(6, 1, 0, 0, 0);
+  command_list_->DrawIndexedInstanced(36, 1, 0, 0, 0);
   resource_barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_targets_[current_frame_index_].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
   command_list_->ResourceBarrier(1, &resource_barrier);
 
