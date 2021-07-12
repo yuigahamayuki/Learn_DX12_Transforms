@@ -59,13 +59,13 @@ public:
   void GetCubeVertexData(Vertex** vertices_data) const {
     (*vertices_data) = new Vertex[8];
     (*vertices_data)[0] = Vertex(-0.5f, -0.5f, -0.5f, 0.6f, 0.0f, 0.0f);
-    (*vertices_data)[1] = Vertex(-0.5f, 0.5f, -0.5f, 0.6f, 0.0f, 0.0f);
-    (*vertices_data)[2] = Vertex(0.5f, -0.5f, -0.5f, 0.6f, 0.0f, 0.0f);
+    (*vertices_data)[1] = Vertex(-0.5f, 0.5f, -0.5f, 0.0f, 0.6f, 0.0f);
+    (*vertices_data)[2] = Vertex(0.5f, -0.5f, -0.5f, 0.0f, 0.0f, 0.6f);
     (*vertices_data)[3] = Vertex(0.5f, 0.5f, -0.5f, 0.6f, 0.0f, 0.0f);
-    (*vertices_data)[4] = Vertex(-0.5f, -0.5f, 0.5f, 0.6f, 0.0f, 0.0f);
-    (*vertices_data)[5] = Vertex(-0.5f, 0.5f, 0.5f, 0.6f, 0.0f, 0.0f);
-    (*vertices_data)[6] = Vertex(0.5f, -0.5f, 0.5f, 0.6f, 0.0f, 0.0f);
-    (*vertices_data)[7] = Vertex(0.5f, 0.5f, 0.5f, 0.6f, 0.0f, 0.0f);
+    (*vertices_data)[4] = Vertex(-0.5f, -0.5f, 0.5f, 0.0f, 0.6f, 0.6f);
+    (*vertices_data)[5] = Vertex(-0.5f, 0.5f, 0.5f, 0.6f, 0.0f, 0.6f);
+    (*vertices_data)[6] = Vertex(0.5f, -0.5f, 0.5f, 0.6f, 0.6f, 0.6f);
+    (*vertices_data)[7] = Vertex(0.5f, 0.5f, 0.5f, 0.0f, 0.6f, 0.6f);
   }
 
   size_t GetCubeVertexDataSize() const {

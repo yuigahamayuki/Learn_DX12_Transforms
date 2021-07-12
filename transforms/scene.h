@@ -43,6 +43,7 @@ private:
   void CreateAssets(ID3D12Device* device);
   void UpdateConstantBuffer();
   void CommitConstantBuffer();
+  void SetCameras();
   void PopulateCommandLists();
 
   UINT frame_count_ = 0;
@@ -74,4 +75,6 @@ private:
   std::vector<Camera> cameras_;
   SceneConstantBuffer scene_constant_buffer_;
   void* scene_constant_buffer_pointer_ = nullptr;
+
+  UINT camera_index_ = 0;
 };

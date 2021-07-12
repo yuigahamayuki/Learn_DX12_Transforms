@@ -22,6 +22,8 @@ void Scene::Initialize(ID3D12Device* device, ID3D12CommandQueue* command_queue, 
 
   SetFrameIndex(frame_index);
 
+  SetCameras();
+
   D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
 
   // This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
@@ -116,13 +118,13 @@ void Scene::Update()
   const float angleChange = 0.002f;
 
   if (keyboard_input_.leftArrowPressed)
-    cameras_[0].RotateAroundYAxis(-angleChange);
+    cameras_[camera_index_].RotateAroundYAxis(-angleChange);
   if (keyboard_input_.rightArrowPressed)
-    cameras_[0].RotateAroundYAxis(angleChange);
+    cameras_[camera_index_].RotateAroundYAxis(angleChange);
   if (keyboard_input_.upArrowPressed)
-    cameras_[0].RotatePitch(-angleChange);
+    cameras_[camera_index_].RotatePitch(-angleChange);
   if (keyboard_input_.downArrowPressed)
-    cameras_[0].RotatePitch(angleChange);
+    cameras_[camera_index_].RotatePitch(angleChange);
 
   UpdateConstantBuffer();
   CommitConstantBuffer();
@@ -151,6 +153,18 @@ void Scene::KeyDown(UINT8 key)
     break;
   case VK_DOWN:
     keyboard_input_.downArrowPressed = true;
+    break;
+  case '1':
+    camera_index_ = 0;
+    break;
+  case '2':
+    camera_index_ = 1;
+    break;
+  case '3':
+    camera_index_ = 2;
+    break;
+  case '4':
+    camera_index_ = 3;
     break;
   default:
     break;
@@ -201,7 +215,6 @@ void Scene::CreateAssets(ID3D12Device* device)
   AssetsManager::GetSharedInstance().GetCubeVertexData(&vertices_data);
   size_t vertex_data_size = AssetsManager::GetSharedInstance().GetCubeVertexDataSize();
 
-  // TODO: test with quad, need to be changed to cube
   CD3DX12_HEAP_PROPERTIES default_heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
   CD3DX12_RESOURCE_DESC vertex_buffer_resource_desc = CD3DX12_RESOURCE_DESC::Buffer(vertex_data_size);
   ThrowIfFailed(device->CreateCommittedResource(&default_heap_properties,
@@ -229,7 +242,6 @@ void Scene::CreateAssets(ID3D12Device* device)
   vertex_buffer_view_.SizeInBytes = static_cast<UINT>(vertex_data_size);
   vertex_buffer_view_.StrideInBytes = static_cast<UINT>(AssetsManager::GetSharedInstance().GetVertexStride());
 
-  // TODO: test with quad, need to be changed to cube
   DWORD* indices_data = nullptr;
   AssetsManager::GetSharedInstance().GetCubeIndexData(&indices_data);
   size_t index_data_size = AssetsManager::GetSharedInstance().GetCubeIndexDataSize();
@@ -265,12 +277,26 @@ void Scene::CreateAssets(ID3D12Device* device)
 void Scene::UpdateConstantBuffer()
 {
   XMStoreFloat4x4(&scene_constant_buffer_.model, XMMatrixIdentity());
-  cameras_[0].Get3DViewProjMatrices(&scene_constant_buffer_.view, &scene_constant_buffer_.proj, 90.f, view_port_.Width, view_port_.Height);
+  cameras_[camera_index_].Get3DViewProjMatrices(&scene_constant_buffer_.view, &scene_constant_buffer_.proj, 90.f, view_port_.Width, view_port_.Height);
 }
 
 void Scene::CommitConstantBuffer()
 {
   memcpy(scene_constant_buffer_pointer_, &scene_constant_buffer_, sizeof(scene_constant_buffer_));
+}
+
+void Scene::SetCameras()
+{
+  XMVECTOR eye = XMVectorSet(0.0f, 1.0f, 2.0f, 0.0f);
+  XMVECTOR at = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+  XMVECTOR up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+  cameras_[1].Set(eye, at, up);
+
+  eye = XMVectorSet(-2.0f, 1.0f, 0.0f, 0.0f);
+  cameras_[2].Set(eye, at, up);
+
+  eye = XMVectorSet(2.0f, 1.0f, 0.0f, 0.0f);
+  cameras_[3].Set(eye, at, up);
 }
 
 void Scene::PopulateCommandLists()
@@ -283,7 +309,7 @@ void Scene::PopulateCommandLists()
   CD3DX12_RESOURCE_BARRIER resource_barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_targets_[current_frame_index_].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
   command_list_->ResourceBarrier(1, &resource_barrier);
   CD3DX12_CPU_DESCRIPTOR_HANDLE rtv_cpu_descriptor_handle(rtv_descriptor_heap_->GetCPUDescriptorHandleForHeapStart(), current_frame_index_, rtv_descriptor_increment_size_);
-  const FLOAT clear_color[] = { 0.0f, 0.6f, 0.0f, 1.0f };
+  const FLOAT clear_color[] = { 0.0f, 0.0f, 0.0f, 1.0f };
   command_list_->ClearRenderTargetView(rtv_cpu_descriptor_handle, clear_color, 0, nullptr);
 
   command_list_->IASetVertexBuffers(0, 1, &vertex_buffer_view_);

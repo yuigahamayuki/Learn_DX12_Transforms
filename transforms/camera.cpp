@@ -19,8 +19,8 @@ void Camera::Get3DViewProjMatricesLH(XMFLOAT4X4* view, XMFLOAT4X4* proj, float f
     fovAngleY /= aspectRatio;
   }
 
-  XMStoreFloat4x4(view, XMMatrixLookAtLH(mEye, mAt, mUp));
-  XMStoreFloat4x4(proj, XMMatrixPerspectiveFovLH(fovAngleY, aspectRatio, 0.01f, 10.0f));
+  XMStoreFloat4x4(view, XMMatrixTranspose(XMMatrixLookAtLH(mEye, mAt, mUp)));
+  XMStoreFloat4x4(proj, XMMatrixTranspose(XMMatrixPerspectiveFovLH(fovAngleY, aspectRatio, 0.01f, 10.0f)));
 }
 
 void Camera::Get3DViewProjMatrices(XMFLOAT4X4* view, XMFLOAT4X4* proj, float fovInDegrees, float screenWidth, float screenHeight)
@@ -39,7 +39,7 @@ void Camera::Get3DViewProjMatrices(XMFLOAT4X4* view, XMFLOAT4X4* proj, float fov
 
 void Camera::Reset()
 {
-  mEye = XMVectorSet(0.0f, 0.0f, 2.0f, 0.0f);
+  mEye = XMVectorSet(0.0f, 1.0f, -2.0f, 0.0f);
   mAt = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
   mUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 }
