@@ -39,7 +39,7 @@ void Camera::Get3DViewProjMatrices(XMFLOAT4X4* view, XMFLOAT4X4* proj, float fov
 
 void Camera::Reset()
 {
-  mEye = XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f);
+  mEye = XMVectorSet(0.0f, 0.0f, 2.0f, 0.0f);
   mAt = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
   mUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
 }

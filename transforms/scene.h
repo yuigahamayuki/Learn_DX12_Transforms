@@ -8,6 +8,14 @@
 
 using Microsoft::WRL::ComPtr;
 
+struct InputState
+{
+  bool rightArrowPressed;
+  bool leftArrowPressed;
+  bool upArrowPressed;
+  bool downArrowPressed;
+};
+
 struct SceneConstantBuffer {
   XMFLOAT4X4 model;
   XMFLOAT4X4 view;
@@ -23,6 +31,8 @@ public:
   void LoadSizeDependentResources(ID3D12Device* device, ComPtr<ID3D12Resource>* render_targets, UINT width, UINT height);
   void Update();
   void Render(ID3D12CommandQueue* command_queue);
+  void KeyDown(UINT8 key);
+  void KeyUp(UINT8 key);
 
   void SetFrameIndex(UINT frame_index) {
     current_frame_index_ = frame_index;
@@ -58,6 +68,8 @@ private:
 
   CD3DX12_VIEWPORT view_port_;
   CD3DX12_RECT scissor_rect_;
+
+  InputState keyboard_input_;
 
   std::vector<Camera> cameras_;
   SceneConstantBuffer scene_constant_buffer_;

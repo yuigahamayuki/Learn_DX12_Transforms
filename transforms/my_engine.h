@@ -19,6 +19,8 @@ protected:
   void OnRender() override;
   void OnSizeChanged(UINT width, UINT height, bool minimized) override;
   void OnDestroy() override;
+  void OnKeyDown(UINT8 key) override;
+  void OnKeyUp(UINT8 key) override;
 
 private:
   void LoadPipeline();

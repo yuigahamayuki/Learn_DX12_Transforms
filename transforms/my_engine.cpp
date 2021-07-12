@@ -42,6 +42,16 @@ void MyEngine::OnDestroy()
 {
 }
 
+void MyEngine::OnKeyDown(UINT8 key)
+{
+  scene_->KeyDown(key);
+}
+
+void MyEngine::OnKeyUp(UINT8 key)
+{
+  scene_->KeyUp(key);
+}
+
 void MyEngine::LoadPipeline()
 {
   UINT dxgiFactoryFlags = 0;

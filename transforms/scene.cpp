@@ -113,6 +113,17 @@ void Scene::LoadSizeDependentResources(ID3D12Device* device, ComPtr<ID3D12Resour
 
 void Scene::Update()
 {
+  const float angleChange = 0.2f;
+
+  if (keyboard_input_.leftArrowPressed)
+    cameras_[0].RotateAroundYAxis(-angleChange);
+  if (keyboard_input_.rightArrowPressed)
+    cameras_[0].RotateAroundYAxis(angleChange);
+  if (keyboard_input_.upArrowPressed)
+    cameras_[0].RotatePitch(-angleChange);
+  if (keyboard_input_.downArrowPressed)
+    cameras_[0].RotatePitch(angleChange);
+
   UpdateConstantBuffer();
   CommitConstantBuffer();
 }
@@ -123,6 +134,48 @@ void Scene::Render(ID3D12CommandQueue* command_queue)
 
   ID3D12CommandList* command_lists[] = { command_list_.Get() };
   command_queue->ExecuteCommandLists(1, command_lists);
+}
+
+void Scene::KeyDown(UINT8 key)
+{
+  switch (key)
+  {
+  case VK_LEFT:
+    keyboard_input_.leftArrowPressed = true;
+    break;
+  case VK_RIGHT:
+    keyboard_input_.rightArrowPressed = true;
+    break;
+  case VK_UP:
+    keyboard_input_.upArrowPressed = true;
+    break;
+  case VK_DOWN:
+    keyboard_input_.downArrowPressed = true;
+    break;
+  default:
+    break;
+  }
+}
+
+void Scene::KeyUp(UINT8 key)
+{
+  switch (key)
+  {
+  case VK_LEFT:
+    keyboard_input_.leftArrowPressed = false;
+    break;
+  case VK_RIGHT:
+    keyboard_input_.rightArrowPressed = false;
+    break;
+  case VK_UP:
+    keyboard_input_.upArrowPressed = false;
+    break;
+  case VK_DOWN:
+    keyboard_input_.downArrowPressed = false;
+    break;
+  default:
+    break;
+  }
 }
 
 void Scene::CreateConstanfBuffer(ID3D12Device* device, UINT size, ID3D12Resource** ppResource, D3D12_RESOURCE_STATES initState)
