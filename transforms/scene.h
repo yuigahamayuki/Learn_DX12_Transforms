@@ -40,6 +40,9 @@ public:
 
 private:
   void CreateConstanfBuffer(ID3D12Device* device, UINT size, ID3D12Resource** ppResource, D3D12_RESOURCE_STATES initState);
+
+  void CreateScenePipelineState(ID3D12Device* device);
+  void CreateAndMapSceneConstantBuffer(ID3D12Device* device);
   void CreateAssets(ID3D12Device* device);
   void UpdateConstantBuffer();
   void CommitConstantBuffer();
