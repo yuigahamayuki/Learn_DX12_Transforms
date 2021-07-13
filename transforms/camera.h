@@ -31,9 +31,16 @@ public:
   void RotateYaw(float angleRad);
   void RotatePitch(float angleRad);
   void GetOrthoProjMatrices(XMFLOAT4X4* view, XMFLOAT4X4* proj, float width, float height);
+
+  void UpdateDirections();
+
   XMVECTOR mEye; // Where the camera is in world space. Z increases into of the screen when using LH coord system (which we are and DX uses)
   XMVECTOR mAt; // What the camera is looking at (world origin)
   XMVECTOR mUp; // Which way is up
+
+  XMFLOAT4 look_direction_;
+  XMFLOAT4 right_;
+  XMFLOAT4 refined_up_;
 private:
   
 };

@@ -78,3 +78,15 @@ void Camera::RotatePitch(float angleRad)
 void Camera::GetOrthoProjMatrices(XMFLOAT4X4* view, XMFLOAT4X4* proj, float width, float height)
 {
 }
+
+void Camera::UpdateDirections()
+{
+  auto look_direction_vector = XMVector4Normalize(mAt - mEye);
+  XMStoreFloat4(&look_direction_, look_direction_vector);
+
+  auto right_vector = XMVector3Cross(mUp, look_direction_vector);
+  XMStoreFloat4(&right_, right_vector);
+
+  auto refined_up_vector = XMVector3Cross(look_direction_vector, right_vector);
+  XMStoreFloat4(&refined_up_, refined_up_vector);
+}

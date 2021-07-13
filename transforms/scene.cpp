@@ -127,6 +127,9 @@ void Scene::Update()
     cameras_[camera_index_].RotatePitch(angleChange);
 
   UpdateConstantBuffer();
+  for (auto i = 0; i < cameras_.size(); ++i) {
+    cameras_[i].UpdateDirections();
+  }
   CommitConstantBuffer();
 }
 
