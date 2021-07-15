@@ -5,14 +5,11 @@ struct GSOutput
 
 [maxvertexcount(3)]
 void main(
-	triangle float4 input[3] : SV_POSITION, 
-	inout TriangleStream< GSOutput > output
+	point float4 input[1] : SV_POSITION, 
+	inout LineStream< GSOutput > output
 )
 {
-	for (uint i = 0; i < 3; i++)
-	{
-		GSOutput element;
-		element.pos = input[i];
-		output.Append(element);
-	}
+	GSOutput element;
+	element.pos = input[0];
+	output.Append(element);
 }

@@ -25,8 +25,10 @@ void Scene::Initialize(ID3D12Device* device, ID3D12CommandQueue* command_queue, 
   SetCameras();
 
   CreateScenePipelineState(device);
-
   CreateAndMapSceneConstantBuffer(device);
+
+  CreateCameraDrawPipelineState(device);
+  CreateAndMapCameraDrawConstantBuffer(device);
 
   command_allocators_.resize(frame_count_);
   for (UINT i = 0; i < frame_count_; ++i) {
@@ -36,6 +38,8 @@ void Scene::Initialize(ID3D12Device* device, ID3D12CommandQueue* command_queue, 
   ThrowIfFailed(device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, command_allocators_[current_frame_index_].Get(), pipeline_state_.Get(), IID_PPV_ARGS(&command_list_)));
 
   CreateAssets(device);
+
+  CreateCameraPoints(device);
 
   ThrowIfFailed(command_list_->Close());
   ID3D12CommandList* command_lists[] = { command_list_.Get() };
@@ -234,11 +238,12 @@ void Scene::CreateCameraDrawPipelineState(ID3D12Device* device)
     featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
   }
 
-  CD3DX12_ROOT_PARAMETER1 root_parameters[1]{};
+  CD3DX12_ROOT_PARAMETER1 root_parameters[2]{};
   root_parameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_GEOMETRY);
+  root_parameters[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_GEOMETRY);
 
   CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_desc;
-  root_signature_desc.Init_1_1(1, root_parameters,
+  root_signature_desc.Init_1_1(2, root_parameters,
     0, nullptr,
     D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
     D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
@@ -261,7 +266,6 @@ void Scene::CreateCameraDrawPipelineState(ID3D12Device* device)
   input_layout_desc.NumElements = _countof(input_element_descs);
   input_layout_desc.pInputElementDescs = input_element_descs;
 
-  // TODO: modify
   D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state_desc{};
   pipeline_state_desc.pRootSignature = root_signature_.Get();
   pipeline_state_desc.VS = CD3DX12_SHADER_BYTECODE(vertex_shader.Get());
@@ -278,6 +282,15 @@ void Scene::CreateCameraDrawPipelineState(ID3D12Device* device)
   pipeline_state_desc.SampleDesc.Count = 1;
   pipeline_state_desc.NodeMask = 0;
   ThrowIfFailed(device->CreateGraphicsPipelineState(&pipeline_state_desc, IID_PPV_ARGS(&camera_draw_pipeline_state_)));
+}
+
+void Scene::CreateAndMapCameraDrawConstantBuffer(ID3D12Device* device)
+{
+  // TODO: is multiply by 3 ok?
+  // TOOD: need padding for each array element, that is CameraDrawConstantBuffer ?
+  CreateConstanfBuffer(device, sizeof(CameraDrawConstantBuffer) * (kTotalCameraCount_ - 1), &camera_draw_constant_buffer_view_, D3D12_RESOURCE_STATE_GENERIC_READ);
+  const CD3DX12_RANGE readRange(0, 0);
+  camera_draw_constant_buffer_view_->Map(0, &readRange, &camera_draw_constant_buffer_pointer_);
 }
 
 void Scene::CreateAssets(ID3D12Device* device)
@@ -343,6 +356,33 @@ void Scene::CreateAssets(ID3D12Device* device)
 
   delete[] vertices_data;
   delete[] indices_data;
+}
+
+void Scene::CreateCameraPoints(ID3D12Device* device)
+{
+  CD3DX12_HEAP_PROPERTIES default_heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+  auto buffer_size = sizeof(XMFLOAT3) * (kTotalCameraCount_ - 1);
+  CD3DX12_RESOURCE_DESC camera_points_buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(buffer_size);
+  ThrowIfFailed(device->CreateCommittedResource(&default_heap_properties,
+    D3D12_HEAP_FLAG_NONE,
+    &camera_points_buffer_desc,
+    D3D12_RESOURCE_STATE_COPY_DEST,
+    nullptr,
+    IID_PPV_ARGS(&camera_points_vertex_buffer_)));
+
+  CD3DX12_HEAP_PROPERTIES upload_heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+  ThrowIfFailed(device->CreateCommittedResource(&upload_heap_properties,
+    D3D12_HEAP_FLAG_NONE,
+    &camera_points_buffer_desc,
+    D3D12_RESOURCE_STATE_GENERIC_READ,
+    nullptr,
+    IID_PPV_ARGS(&camera_points_vertex_upload_heap_)));
+
+  // TODO: not updatesubresources
+
+  camera_points_vertex_buffer_view_.BufferLocation = camera_points_vertex_buffer_->GetGPUVirtualAddress();
+  camera_points_vertex_buffer_view_.SizeInBytes = static_cast<UINT>(buffer_size);
+  camera_points_vertex_buffer_view_.StrideInBytes = static_cast<UINT>(sizeof(XMFLOAT3));
 }
 
 void Scene::UpdateConstantBuffer()
