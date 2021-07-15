@@ -43,6 +43,7 @@ private:
 
   void CreateScenePipelineState(ID3D12Device* device);
   void CreateAndMapSceneConstantBuffer(ID3D12Device* device);
+  void CreateCameraDrawPipelineState(ID3D12Device* device);
   void CreateAssets(ID3D12Device* device);
   void UpdateConstantBuffer();
   void CommitConstantBuffer();
@@ -56,6 +57,8 @@ private:
   ComPtr<ID3D12RootSignature> root_signature_;
   ComPtr<ID3D12PipelineState> pipeline_state_;
   ComPtr<ID3D12Resource> scene_constant_buffer_view_;
+  ComPtr<ID3D12RootSignature> camera_draw_root_signature_;
+  ComPtr<ID3D12PipelineState> camera_draw_pipeline_state_;
   std::vector<ComPtr<ID3D12CommandAllocator>> command_allocators_;
   ComPtr<ID3D12GraphicsCommandList> command_list_;
   std::vector<ComPtr<ID3D12Resource>> render_targets_;

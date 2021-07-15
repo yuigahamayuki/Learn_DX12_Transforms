@@ -212,7 +212,7 @@ void Scene::CreateScenePipelineState(ID3D12Device* device)
   pipeline_state_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
   pipeline_state_desc.SampleDesc.Count = 1;
   pipeline_state_desc.NodeMask = 0;
-  device->CreateGraphicsPipelineState(&pipeline_state_desc, IID_PPV_ARGS(&pipeline_state_));
+  ThrowIfFailed(device->CreateGraphicsPipelineState(&pipeline_state_desc, IID_PPV_ARGS(&pipeline_state_)));
 }
 
 void Scene::CreateAndMapSceneConstantBuffer(ID3D12Device* device)
@@ -220,6 +220,64 @@ void Scene::CreateAndMapSceneConstantBuffer(ID3D12Device* device)
   CreateConstanfBuffer(device, sizeof(SceneConstantBuffer), &scene_constant_buffer_view_, D3D12_RESOURCE_STATE_GENERIC_READ);
   const CD3DX12_RANGE readRange(0, 0);
   scene_constant_buffer_view_->Map(0, &readRange, &scene_constant_buffer_pointer_);
+}
+
+void Scene::CreateCameraDrawPipelineState(ID3D12Device* device)
+{
+  D3D12_FEATURE_DATA_ROOT_SIGNATURE featureData = {};
+
+  // This is the highest version the sample supports. If CheckFeatureSupport succeeds, the HighestVersion returned will not be greater than this.
+  featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_1;
+
+  if (FAILED(device->CheckFeatureSupport(D3D12_FEATURE_ROOT_SIGNATURE, &featureData, sizeof(featureData))))
+  {
+    featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
+  }
+
+  CD3DX12_ROOT_PARAMETER1 root_parameters[1]{};
+  root_parameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_GEOMETRY);
+
+  CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_desc;
+  root_signature_desc.Init_1_1(1, root_parameters,
+    0, nullptr,
+    D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
+    D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
+    D3D12_ROOT_SIGNATURE_FLAG_DENY_HULL_SHADER_ROOT_ACCESS |
+    D3D12_ROOT_SIGNATURE_FLAG_DENY_DOMAIN_SHADER_ROOT_ACCESS |
+    D3D12_ROOT_SIGNATURE_FLAG_DENY_PIXEL_SHADER_ROOT_ACCESS);
+  ComPtr<ID3DBlob> root_signature_blob;
+  ComPtr<ID3DBlob> error;
+  ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&root_signature_desc, featureData.HighestVersion, &root_signature_blob, &error));
+  ThrowIfFailed(device->CreateRootSignature(0, root_signature_blob->GetBufferPointer(), root_signature_blob->GetBufferSize(), IID_PPV_ARGS(&camera_draw_root_signature_)));
+
+  ComPtr<ID3DBlob> vertex_shader = CompileShader(L"camera_draw_vertex_shader.hlsl", nullptr, "main", "vs_5_0");
+  ComPtr<ID3DBlob> geometry_shader = CompileShader(L"camera_draw_geometry_shader.hlsl", nullptr, "main", "gs_5_0");
+  ComPtr<ID3DBlob> pixel_shader = CompileShader(L"camera_draw_pixel_shader.hlsl", nullptr, "main", "ps_5_0");
+
+  D3D12_INPUT_ELEMENT_DESC input_element_descs[] = {
+    {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+  };
+  D3D12_INPUT_LAYOUT_DESC input_layout_desc{};
+  input_layout_desc.NumElements = _countof(input_element_descs);
+  input_layout_desc.pInputElementDescs = input_element_descs;
+
+  // TODO: modify
+  D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state_desc{};
+  pipeline_state_desc.pRootSignature = root_signature_.Get();
+  pipeline_state_desc.VS = CD3DX12_SHADER_BYTECODE(vertex_shader.Get());
+  pipeline_state_desc.GS = CD3DX12_SHADER_BYTECODE(geometry_shader.Get());
+  pipeline_state_desc.PS = CD3DX12_SHADER_BYTECODE(pixel_shader.Get());
+  pipeline_state_desc.BlendState = CD3DX12_BLEND_DESC(CD3DX12_DEFAULT());
+  pipeline_state_desc.SampleMask = UINT_MAX;
+  pipeline_state_desc.RasterizerState = CD3DX12_RASTERIZER_DESC(CD3DX12_DEFAULT());
+  pipeline_state_desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(CD3DX12_DEFAULT());
+  pipeline_state_desc.InputLayout = input_layout_desc;
+  pipeline_state_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+  pipeline_state_desc.NumRenderTargets = 1;
+  pipeline_state_desc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+  pipeline_state_desc.SampleDesc.Count = 1;
+  pipeline_state_desc.NodeMask = 0;
+  ThrowIfFailed(device->CreateGraphicsPipelineState(&pipeline_state_desc, IID_PPV_ARGS(&camera_draw_pipeline_state_)));
 }
 
 void Scene::CreateAssets(ID3D12Device* device)
