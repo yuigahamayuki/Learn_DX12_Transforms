@@ -7,7 +7,7 @@ Scene::Scene(UINT frame_count, UINT width, UINT height) : frame_count_(frame_cou
   view_port_(0.0f, 0.0f, (float)width, (float)height),
   scissor_rect_(0, 0, width, height)
 {
-  cameras_.resize(4);
+  cameras_.resize(kTotalCameraCount_);
 }
 
 Scene::~Scene()
@@ -77,10 +77,12 @@ void Scene::Update()
   if (keyboard_input_.downArrowPressed)
     cameras_[camera_index_].RotatePitch(angleChange);
 
-  UpdateConstantBuffer();
   for (auto i = 0; i < cameras_.size(); ++i) {
     cameras_[i].UpdateDirections();
   }
+
+  UpdateConstantBuffer();
+
   CommitConstantBuffer();
 }
 
@@ -389,11 +391,26 @@ void Scene::UpdateConstantBuffer()
 {
   XMStoreFloat4x4(&scene_constant_buffer_.model, XMMatrixIdentity());
   cameras_[camera_index_].Get3DViewProjMatrices(&scene_constant_buffer_.view, &scene_constant_buffer_.proj, 90.f, view_port_.Width, view_port_.Height);
+
+  // update camera draw constant buffer
+  int constant_buffer_index = 0;
+  for (auto i = 0; i < kTotalCameraCount_; ++i) {
+    if (i != camera_index_) {
+      camera_draw_constant_buffers_[constant_buffer_index].camera_look = cameras_[i].look_direction_;
+      camera_draw_constant_buffers_[constant_buffer_index].camera_right = cameras_[i].right_;
+      camera_draw_constant_buffers_[constant_buffer_index].camera_up = cameras_[i].refined_up_;
+
+      constant_buffer_index++;
+    }
+  }
 }
 
 void Scene::CommitConstantBuffer()
 {
   memcpy(scene_constant_buffer_pointer_, &scene_constant_buffer_, sizeof(scene_constant_buffer_));
+
+  auto size = sizeof(camera_draw_constant_buffers_);
+  memcpy(camera_draw_constant_buffer_pointer_, camera_draw_constant_buffers_, size);
 }
 
 void Scene::SetCameras()
@@ -412,8 +429,8 @@ void Scene::SetCameras()
 
 void Scene::PopulateCommandLists()
 {
-  command_allocators_[current_frame_index_]->Reset();
-  command_list_->Reset(command_allocators_[current_frame_index_].Get(), pipeline_state_.Get());
+  ThrowIfFailed(command_allocators_[current_frame_index_]->Reset());
+  ThrowIfFailed(command_list_->Reset(command_allocators_[current_frame_index_].Get(), pipeline_state_.Get()));
   command_list_->SetGraphicsRootSignature(root_signature_.Get());
   command_list_->SetGraphicsRootConstantBufferView(0, scene_constant_buffer_view_->GetGPUVirtualAddress());
 
@@ -433,8 +450,47 @@ void Scene::PopulateCommandLists()
   command_list_->OMSetRenderTargets(1, &rtv_cpu_descriptor_handle, false, nullptr);
 
   command_list_->DrawIndexedInstanced(36, 1, 0, 0, 0);
+
+  DrawCameras();
+
   resource_barrier = CD3DX12_RESOURCE_BARRIER::Transition(render_targets_[current_frame_index_].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
   command_list_->ResourceBarrier(1, &resource_barrier);
 
+
+
   ThrowIfFailed(command_list_->Close());
+}
+
+void Scene::DrawCameras()
+{
+  command_list_->SetPipelineState(camera_draw_pipeline_state_.Get());
+  command_list_->SetGraphicsRootSignature(camera_draw_root_signature_.Get());
+  // TODO: need to call?
+  // command_list_->SetGraphicsRootConstantBufferView(0, scene_constant_buffer_view_->GetGPUVirtualAddress());
+  command_list_->SetGraphicsRootConstantBufferView(1, camera_draw_constant_buffer_view_->GetGPUVirtualAddress());
+  
+  UpdateVerticesOfCameraPoints();
+  
+  // TODO: slot 0 ok ?
+  command_list_->IASetVertexBuffers(0, 1, &camera_points_vertex_buffer_view_);
+  command_list_->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+
+  command_list_->DrawInstanced(kTotalCameraCount_ - 1, 1, 0, 0);
+}
+
+void Scene::UpdateVerticesOfCameraPoints()
+{
+  XMFLOAT3 camera_points[3];
+  int camera_point_index = 0;
+  for (auto i = 0; i < kTotalCameraCount_; ++i) {
+    if (i != camera_index_) {
+      XMStoreFloat3(&camera_points[camera_point_index], cameras_[i].mEye);
+      camera_point_index++;
+    }
+  }
+  D3D12_SUBRESOURCE_DATA camera_points_subresource_data{};
+  camera_points_subresource_data.pData = camera_points;
+  camera_points_subresource_data.RowPitch = sizeof(camera_points);
+  camera_points_subresource_data.SlicePitch = camera_points_subresource_data.RowPitch;
+  UpdateSubresources(command_list_.Get(), camera_points_vertex_buffer_.Get(), camera_points_vertex_upload_heap_.Get(), 0, 0, 1, &camera_points_subresource_data);
 }

@@ -57,6 +57,9 @@ private:
   void CommitConstantBuffer();
   void SetCameras();
   void PopulateCommandLists();
+  void DrawCameras();
+  // Update vertices of camera points
+  void UpdateVerticesOfCameraPoints();
 
   UINT frame_count_ = 0;
   UINT current_frame_index_ = 0;
@@ -95,8 +98,8 @@ private:
   SceneConstantBuffer scene_constant_buffer_;
   void* scene_constant_buffer_pointer_ = nullptr;
   // TODO: is array ok?
-  CameraDrawConstantBuffer camera_draw_constant_buffer_[kTotalCameraCount_ - 1];  // - 1: draw the other three cameras except the current viewing camera
+  CameraDrawConstantBuffer camera_draw_constant_buffers_[kTotalCameraCount_ - 1];  // - 1: draw the other three cameras except the current viewing camera
   void* camera_draw_constant_buffer_pointer_ = nullptr;
 
-  UINT camera_index_ = 0;
+  UINT camera_index_ = 0;  // camera index of current viewing camera
 };
