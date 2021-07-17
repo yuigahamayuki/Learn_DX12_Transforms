@@ -269,7 +269,7 @@ void Scene::CreateCameraDrawPipelineState(ID3D12Device* device)
   input_layout_desc.pInputElementDescs = input_element_descs;
 
   D3D12_GRAPHICS_PIPELINE_STATE_DESC pipeline_state_desc{};
-  pipeline_state_desc.pRootSignature = root_signature_.Get();
+  pipeline_state_desc.pRootSignature = camera_draw_root_signature_.Get();
   pipeline_state_desc.VS = CD3DX12_SHADER_BYTECODE(vertex_shader.Get());
   pipeline_state_desc.GS = CD3DX12_SHADER_BYTECODE(geometry_shader.Get());
   pipeline_state_desc.PS = CD3DX12_SHADER_BYTECODE(pixel_shader.Get());
@@ -368,9 +368,10 @@ void Scene::CreateCameraPoints(ID3D12Device* device)
   ThrowIfFailed(device->CreateCommittedResource(&default_heap_properties,
     D3D12_HEAP_FLAG_NONE,
     &camera_points_buffer_desc,
-    D3D12_RESOURCE_STATE_COPY_DEST,
+    D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER,
     nullptr,
     IID_PPV_ARGS(&camera_points_vertex_buffer_)));
+  NAME_D3D12_OBJECT(camera_points_vertex_buffer_);
 
   CD3DX12_HEAP_PROPERTIES upload_heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
   ThrowIfFailed(device->CreateCommittedResource(&upload_heap_properties,
@@ -492,5 +493,11 @@ void Scene::UpdateVerticesOfCameraPoints()
   camera_points_subresource_data.pData = camera_points;
   camera_points_subresource_data.RowPitch = sizeof(camera_points);
   camera_points_subresource_data.SlicePitch = camera_points_subresource_data.RowPitch;
+
+  CD3DX12_RESOURCE_BARRIER resource_barrier_1 = CD3DX12_RESOURCE_BARRIER::Transition(camera_points_vertex_buffer_.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);
+  command_list_->ResourceBarrier(1, &resource_barrier_1);
   UpdateSubresources(command_list_.Get(), camera_points_vertex_buffer_.Get(), camera_points_vertex_upload_heap_.Get(), 0, 0, 1, &camera_points_subresource_data);
+
+  CD3DX12_RESOURCE_BARRIER resource_barrier_2 = CD3DX12_RESOURCE_BARRIER::Transition(camera_points_vertex_buffer_.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER);
+  command_list_->ResourceBarrier(1, &resource_barrier_2);
 }
