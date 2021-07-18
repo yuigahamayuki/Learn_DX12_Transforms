@@ -52,7 +52,7 @@ public:
   XMVECTOR mAt; // What the camera is looking at (world origin)
   XMVECTOR mUp; // Which way is up
 
-  XMFLOAT4 look_direction_;
+  XMFLOAT4 look_direction_;  // camera pos to target
   XMFLOAT4 right_;
   XMFLOAT4 refined_up_;
 private:
