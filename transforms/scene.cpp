@@ -28,7 +28,6 @@ void Scene::Initialize(ID3D12Device* device, ID3D12CommandQueue* command_queue, 
   CreateAndMapSceneConstantBuffer(device);
 
   CreateCameraDrawPipelineState(device);
-  CreateAndMapCameraDrawConstantBuffer(device);
 
   command_allocators_.resize(frame_count_);
   for (UINT i = 0; i < frame_count_; ++i) {
@@ -240,12 +239,11 @@ void Scene::CreateCameraDrawPipelineState(ID3D12Device* device)
     featureData.HighestVersion = D3D_ROOT_SIGNATURE_VERSION_1_0;
   }
 
-  CD3DX12_ROOT_PARAMETER1 root_parameters[2]{};
+  CD3DX12_ROOT_PARAMETER1 root_parameters[1]{};
   root_parameters[0].InitAsConstantBufferView(0, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_GEOMETRY);
-  root_parameters[1].InitAsConstantBufferView(1, 0, D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC, D3D12_SHADER_VISIBILITY_GEOMETRY);
 
   CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC root_signature_desc;
-  root_signature_desc.Init_1_1(2, root_parameters,
+  root_signature_desc.Init_1_1(1, root_parameters,
     0, nullptr,
     D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT |
     D3D12_ROOT_SIGNATURE_FLAG_DENY_VERTEX_SHADER_ROOT_ACCESS |
@@ -258,11 +256,14 @@ void Scene::CreateCameraDrawPipelineState(ID3D12Device* device)
   ThrowIfFailed(device->CreateRootSignature(0, root_signature_blob->GetBufferPointer(), root_signature_blob->GetBufferSize(), IID_PPV_ARGS(&camera_draw_root_signature_)));
 
   ComPtr<ID3DBlob> vertex_shader = CompileShader(L"camera_draw_vertex_shader.hlsl", nullptr, "main", "vs_5_0");
-  ComPtr<ID3DBlob> geometry_shader = CompileShader(L"camera_draw_geometry_shader.hlsl", nullptr, "main", "gs_5_0");
+  ComPtr<ID3DBlob> geometry_shader = CompileShader(L"camera_draw_geometry_shader.hlsl", nullptr, "main", "gs_5_1");
   ComPtr<ID3DBlob> pixel_shader = CompileShader(L"camera_draw_pixel_shader.hlsl", nullptr, "main", "ps_5_0");
 
   D3D12_INPUT_ELEMENT_DESC input_element_descs[] = {
-    {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+    {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+    {"TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+    {"TEXCOORD", 1, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+    {"TEXCOORD", 2, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D12_APPEND_ALIGNED_ELEMENT, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
   };
   D3D12_INPUT_LAYOUT_DESC input_layout_desc{};
   input_layout_desc.NumElements = _countof(input_element_descs);
@@ -284,15 +285,6 @@ void Scene::CreateCameraDrawPipelineState(ID3D12Device* device)
   pipeline_state_desc.SampleDesc.Count = 1;
   pipeline_state_desc.NodeMask = 0;
   ThrowIfFailed(device->CreateGraphicsPipelineState(&pipeline_state_desc, IID_PPV_ARGS(&camera_draw_pipeline_state_)));
-}
-
-void Scene::CreateAndMapCameraDrawConstantBuffer(ID3D12Device* device)
-{
-  // TODO: is multiply by 3 ok?
-  // TOOD: need padding for each array element, that is CameraDrawConstantBuffer ?
-  CreateConstanfBuffer(device, sizeof(CameraDrawConstantBuffer) * (kTotalCameraCount_ - 1), &camera_draw_constant_buffer_view_, D3D12_RESOURCE_STATE_GENERIC_READ);
-  const CD3DX12_RANGE readRange(0, 0);
-  camera_draw_constant_buffer_view_->Map(0, &readRange, &camera_draw_constant_buffer_pointer_);
 }
 
 void Scene::CreateAssets(ID3D12Device* device)
@@ -363,7 +355,7 @@ void Scene::CreateAssets(ID3D12Device* device)
 void Scene::CreateCameraPoints(ID3D12Device* device)
 {
   CD3DX12_HEAP_PROPERTIES default_heap_properties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-  auto buffer_size = sizeof(XMFLOAT3) * (kTotalCameraCount_ - 1);
+  auto buffer_size = sizeof(Camera::Vertex) * (kTotalCameraCount_ - 1);
   CD3DX12_RESOURCE_DESC camera_points_buffer_desc = CD3DX12_RESOURCE_DESC::Buffer(buffer_size);
   ThrowIfFailed(device->CreateCommittedResource(&default_heap_properties,
     D3D12_HEAP_FLAG_NONE,
@@ -385,33 +377,18 @@ void Scene::CreateCameraPoints(ID3D12Device* device)
 
   camera_points_vertex_buffer_view_.BufferLocation = camera_points_vertex_buffer_->GetGPUVirtualAddress();
   camera_points_vertex_buffer_view_.SizeInBytes = static_cast<UINT>(buffer_size);
-  camera_points_vertex_buffer_view_.StrideInBytes = static_cast<UINT>(sizeof(XMFLOAT3));
+  camera_points_vertex_buffer_view_.StrideInBytes = static_cast<UINT>(sizeof(Camera::Vertex));
 }
 
 void Scene::UpdateConstantBuffer()
 {
   XMStoreFloat4x4(&scene_constant_buffer_.model, XMMatrixIdentity());
   cameras_[camera_index_].Get3DViewProjMatrices(&scene_constant_buffer_.view, &scene_constant_buffer_.proj, 90.f, view_port_.Width, view_port_.Height);
-
-  // update camera draw constant buffer
-  int constant_buffer_index = 0;
-  for (auto i = 0; i < kTotalCameraCount_; ++i) {
-    if (i != camera_index_) {
-      camera_draw_constant_buffers_[constant_buffer_index].camera_look = cameras_[i].look_direction_;
-      camera_draw_constant_buffers_[constant_buffer_index].camera_right = cameras_[i].right_;
-      camera_draw_constant_buffers_[constant_buffer_index].camera_up = cameras_[i].refined_up_;
-
-      constant_buffer_index++;
-    }
-  }
 }
 
 void Scene::CommitConstantBuffer()
 {
   memcpy(scene_constant_buffer_pointer_, &scene_constant_buffer_, sizeof(scene_constant_buffer_));
-
-  auto size = sizeof(camera_draw_constant_buffers_);
-  memcpy(camera_draw_constant_buffer_pointer_, camera_draw_constant_buffers_, size);
 }
 
 void Scene::SetCameras()
@@ -467,8 +444,7 @@ void Scene::DrawCameras()
   command_list_->SetPipelineState(camera_draw_pipeline_state_.Get());
   command_list_->SetGraphicsRootSignature(camera_draw_root_signature_.Get());
   // TODO: need to call?
-  // command_list_->SetGraphicsRootConstantBufferView(0, scene_constant_buffer_view_->GetGPUVirtualAddress());
-  command_list_->SetGraphicsRootConstantBufferView(1, camera_draw_constant_buffer_view_->GetGPUVirtualAddress());
+  //command_list_->SetGraphicsRootConstantBufferView(0, scene_constant_buffer_view_->GetGPUVirtualAddress());
   
   UpdateVerticesOfCameraPoints();
   
@@ -481,17 +457,18 @@ void Scene::DrawCameras()
 
 void Scene::UpdateVerticesOfCameraPoints()
 {
-  XMFLOAT3 camera_points[3];
+  Camera::Vertex camera_draw_vertices[kTotalCameraCount_ - 1]{};
   int camera_point_index = 0;
   for (auto i = 0; i < kTotalCameraCount_; ++i) {
     if (i != camera_index_) {
-      XMStoreFloat3(&camera_points[camera_point_index], cameras_[i].mEye);
+      cameras_[i].GetCameraVertexData(&camera_draw_vertices[camera_point_index]);
       camera_point_index++;
     }
   }
+
   D3D12_SUBRESOURCE_DATA camera_points_subresource_data{};
-  camera_points_subresource_data.pData = camera_points;
-  camera_points_subresource_data.RowPitch = sizeof(camera_points);
+  camera_points_subresource_data.pData = camera_draw_vertices;
+  camera_points_subresource_data.RowPitch = sizeof(camera_draw_vertices);
   camera_points_subresource_data.SlicePitch = camera_points_subresource_data.RowPitch;
 
   CD3DX12_RESOURCE_BARRIER resource_barrier_1 = CD3DX12_RESOURCE_BARRIER::Transition(camera_points_vertex_buffer_.Get(), D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER, D3D12_RESOURCE_STATE_COPY_DEST);

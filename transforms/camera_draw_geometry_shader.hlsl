@@ -1,11 +1,18 @@
+cbuffer SceneConstantBuffer : register(b0)
+{
+	float4x4 model;
+	float4x4 view;
+	float4x4 proj;
+};
+
 struct GSOutput
 {
 	float4 pos : SV_POSITION;
 };
 
-[maxvertexcount(3)]
+[maxvertexcount(5)]
 void main(
-	point float4 input[1] : SV_POSITION, 
+	point float4 input[1] : POSITION, 
 	inout LineStream< GSOutput > output
 )
 {

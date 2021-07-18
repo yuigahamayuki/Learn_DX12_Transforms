@@ -22,12 +22,6 @@ struct SceneConstantBuffer {
   XMFLOAT4X4 proj;
 };
 
-struct CameraDrawConstantBuffer {
-  XMFLOAT4 camera_right;
-  XMFLOAT4 camera_look;  // look direction, from eye to target
-  XMFLOAT4 camera_up;
-};
-
 class Scene {
 public:
   Scene(UINT frame_count, UINT width, UINT height);
@@ -50,7 +44,6 @@ private:
   void CreateScenePipelineState(ID3D12Device* device);
   void CreateAndMapSceneConstantBuffer(ID3D12Device* device);
   void CreateCameraDrawPipelineState(ID3D12Device* device);
-  void CreateAndMapCameraDrawConstantBuffer(ID3D12Device* device);
   void CreateAssets(ID3D12Device* device);
   void CreateCameraPoints(ID3D12Device* device);
   void UpdateConstantBuffer();
@@ -71,7 +64,6 @@ private:
   ComPtr<ID3D12Resource> scene_constant_buffer_view_;
   ComPtr<ID3D12RootSignature> camera_draw_root_signature_;
   ComPtr<ID3D12PipelineState> camera_draw_pipeline_state_;
-  ComPtr<ID3D12Resource> camera_draw_constant_buffer_view_;
   std::vector<ComPtr<ID3D12CommandAllocator>> command_allocators_;
   ComPtr<ID3D12GraphicsCommandList> command_list_;
   std::vector<ComPtr<ID3D12Resource>> render_targets_;
@@ -97,9 +89,6 @@ private:
   std::vector<Camera> cameras_;
   SceneConstantBuffer scene_constant_buffer_;
   void* scene_constant_buffer_pointer_ = nullptr;
-  // TODO: is array ok?
-  CameraDrawConstantBuffer camera_draw_constant_buffers_[kTotalCameraCount_ - 1];  // - 1: draw the other three cameras except the current viewing camera
-  void* camera_draw_constant_buffer_pointer_ = nullptr;
 
   UINT camera_index_ = 0;  // camera index of current viewing camera
 };
